@@ -1,6 +1,5 @@
 const Cars = require("./cars-model");
-const db = require("../../data/db-config");
-const vinValidator = require("vin-validator");
+const vin = require("vin-validator");
 
 const checkCarId = (req, res, next) => {
   Cars.getById(req.params.id)
@@ -20,33 +19,41 @@ const checkCarId = (req, res, next) => {
 
 const checkCarPayload = (req, res, next) => {
   if (!req.body.vin) {
-    next({ status: 400, message: `vin is missing` });
+    return next({ status: 400, message: `vin is missing` });
   } else if (!req.body.make) {
-    next({ status: 400, message: `make is missing` });
+    return next({ status: 400, message: `make is missing` });
   } else if (!req.body.model) {
-    next({ status: 400, message: `model is missing` });
+    return next({ status: 400, message: `model is missing` });
   } else if (!req.body.mileage) {
-    next({ status: 400, message: `mileage is missing` });
-  } else {
-    next();
+    return next({ status: 400, message: `mileage is missing` });
   }
+  next();
 };
 
 const checkVinNumberValid = (req, res, next) => {
-  const isValidVin = vinValidator.validate(req.body.vin);
-  if (!isValidVin) {
-    next({ status: 400, message: `vin ${req.body.vin} is invalid` });
-  } else {
+  if (vin.validate(req.body.vin)) {
     next();
+  } else {
+    next({ status: 400, message: `vin ${req.body.vin} is invalid` });
   }
 };
 
-const checkVinNumberUnique = (req, res, next) => {
-  db("cars")
-    .where("vin", req.body.vin)
-    .first()
+const checkVinNumberUnique = async (req, res, next) => {
+  // try {
+  //   const existing = await Cars.getByVin(req.body.vin);
+  //   if (!existing) {
+  //     next();
+  //   } else {
+  //     next({ status: 400, message: `vin ${req.body.vin} already exists` });
+  //   }
+  // } catch (err) {
+  //   next(err);
+  // }
+  Cars.getByVin(req.body.vin)
     .then((exists) => {
-      if (exists) {
+      if (!exists) {
+        next();
+      } else {
         next({ status: 400, message: `vin ${req.body.vin} already exists` });
       }
     })
